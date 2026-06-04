@@ -1,0 +1,37 @@
+name: Auto Open PR From Develop
+
+on:
+  push:
+    branches:
+      - develop
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  open-pr:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.AUTO_PR_APP_ID }}
+          private-key: ${{ secrets.AUTO_PR_APP_PRIVATE_KEY }}
+
+      - name: Open or reuse pull request
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_API_URL: ${{ github.api_url }}
+          PR_HEAD_BRANCH: develop
+          PR_BASE_BRANCH: main
+          PR_TITLE: "Auto PR: develop -> main"
+          PR_BODY: Automatically opened after a push to develop.
+        run: node scripts/create-pr.js
