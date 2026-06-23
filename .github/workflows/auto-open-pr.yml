@@ -15,7 +15,7 @@ permissions:
 jobs:
   open-pr:
     runs-on: ubuntu-latest
-    if: github.run_number <= 2
+    if: github.run_number <= 10
 
     steps:
       - name: Checkout repository
