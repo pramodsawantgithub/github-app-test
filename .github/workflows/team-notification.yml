@@ -1,0 +1,49 @@
+name: Team Notification
+
+on:
+  workflow_dispatch:
+    inputs:
+      title:
+        description: Short heading for the Slack message
+        required: true
+        default: Manual team update
+      message:
+        description: Notification text to send to Slack
+        required: true
+      mention:
+        description: Optional Slack mention such as <!channel> or @team-handle
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Post notification to Slack
+        uses: slackapi/slack-github-action@v3
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload: |
+            text: "${{ github.event.inputs.mention }} ${{ github.event.inputs.title }}\n${{ github.event.inputs.message }}"
+            blocks:
+              - type: section
+                text:
+                  type: mrkdwn
+                  text: "*${{ github.event.inputs.title }}*"
+              - type: section
+                text:
+                  type: mrkdwn
+                  text: "${{ github.event.inputs.message }}"
+              - type: context
+                elements:
+                  - type: mrkdwn
+                    text: "Triggered by `${{ github.actor }}` from `${{ github.repository }}`"
+                  - type: mrkdwn
+                    text: "<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View workflow run>"
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

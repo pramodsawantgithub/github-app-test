@@ -4,7 +4,9 @@ on:
   push:
     branches:
       - develop
-  workflow_dispatch:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch: # manual trigger
 
 permissions:
   contents: read
@@ -13,6 +15,7 @@ permissions:
 jobs:
   open-pr:
     runs-on: ubuntu-latest
+    if: github.run_number <= 2
 
     steps:
       - name: Checkout repository
