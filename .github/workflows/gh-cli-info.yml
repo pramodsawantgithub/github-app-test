@@ -25,7 +25,7 @@ jobs:
       - name: GH CLI - Environment
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
-        run: gh env list --repo ${{ github.repository }}
+        run: gh variable list --repo ${{ github.repository }}
 
       - name: GH CLI - Version
         run: gh --version
