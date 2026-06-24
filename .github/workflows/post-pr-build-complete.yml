@@ -1,0 +1,22 @@
+name: Post PR Build Completion Message
+
+on:
+  workflow_run:
+    workflows:
+      - Auto Open PR From Develop
+    types:
+      - completed
+
+permissions:
+  contents: read
+
+jobs:
+  print-completion-message:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Print build completion message
+        run: |
+          echo "All build completed for workflow: ${{ github.event.workflow_run.name }}"
+          echo "Conclusion: ${{ github.event.workflow_run.conclusion }}"
+          echo "Triggered by run ID: ${{ github.event.workflow_run.id }}"
