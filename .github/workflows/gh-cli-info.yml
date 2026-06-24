@@ -4,48 +4,38 @@ on:
   push:
 
 permissions:
+  actions: read
   contents: read
   issues: read
 
 jobs:
   gh-info:
     runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Create GitHub App token
-        id: app-token
-        uses: actions/create-github-app-token@v1
-        with:
-          app-id: ${{ secrets.AUTO_PR_APP_ID }}
-          private-key: ${{ secrets.AUTO_PR_APP_PRIVATE_KEY }}
-
       - name: GH CLI - Environment
-        env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
-        run: gh variable list --repo ${{ github.repository }}
+        run: env
 
       - name: GH CLI - Version
         run: gh --version
 
       - name: GH CLI - Auth Status
-        env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: gh auth status
+        continue-on-error: true
 
       - name: GH CLI - Repo List
-        env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
-        run: gh repo list ${{ github.repository_owner }}
+        run: gh repo list ${{ github.repository_owner }} --limit 20
+        continue-on-error: true
 
       - name: GH CLI - Issue List
-        env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: gh issue list --repo ${{ github.repository }}
+        continue-on-error: true
 
       - name: GH CLI - Workflow List
-        env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: gh workflow list --repo ${{ github.repository }}
+        continue-on-error: true
