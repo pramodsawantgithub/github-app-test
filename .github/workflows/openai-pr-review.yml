@@ -19,19 +19,33 @@ jobs:
       - name: Reply to PR comment using OpenAI
         uses: actions/github-script@v8
         env:
+          AI_TEST_MODE: ${{ vars.AI_TEST_MODE || 'false' }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-4.1-mini' }}
         with:
           script: |
-            if (!process.env.OPENAI_API_KEY) {
-              core.setFailed('Missing OPENAI_API_KEY secret. Add it in repository settings.');
-              return;
-            }
+            const isTestMode = String(process.env.AI_TEST_MODE || '').toLowerCase() === 'true';
 
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             const prNumber = context.issue.number;
             const userComment = context.payload.comment.body || '';
+
+            if (isTestMode) {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: prNumber,
+                body: `@${context.payload.comment.user.login}\n\n[Test mode] Mock AI reply generated successfully. Disable AI_TEST_MODE to use real OpenAI responses.`
+              });
+              core.info('AI_TEST_MODE is enabled. Posted mock PR comment reply without calling OpenAI.');
+              return;
+            }
+
+            if (!process.env.OPENAI_API_KEY) {
+              core.setFailed('Missing OPENAI_API_KEY secret. Add it in repository settings.');
+              return;
+            }
 
             const { data: pr } = await github.rest.pulls.get({ owner, repo, pull_number: prNumber });
             const files = await github.paginate(github.rest.pulls.listFiles, {
@@ -124,18 +138,33 @@ jobs:
       - name: AI code review for pull request
         uses: actions/github-script@v8
         env:
+          AI_TEST_MODE: ${{ vars.AI_TEST_MODE || 'false' }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-4.1-mini' }}
         with:
           script: |
-            if (!process.env.OPENAI_API_KEY) {
-              core.setFailed('Missing OPENAI_API_KEY secret. Add it in repository settings.');
-              return;
-            }
+            const isTestMode = String(process.env.AI_TEST_MODE || '').toLowerCase() === 'true';
 
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             const prNumber = context.payload.pull_request.number;
+
+            if (isTestMode) {
+              await github.rest.pulls.createReview({
+                owner,
+                repo,
+                pull_number: prNumber,
+                event: 'COMMENT',
+                body: '## AI Review\n\n[Test mode] Mock review generated successfully.\n\n### Summary\n- Workflow trigger works.\n- PR context access works.\n\n### Risks\n- This is a test response; no real model analysis was performed.\n\n### Suggested Improvements\n- Disable `AI_TEST_MODE` to enable real OpenAI review.\n\n### Test Gaps\n- Real LLM output not validated in test mode.'
+              });
+              core.info('AI_TEST_MODE is enabled. Posted mock PR review without calling OpenAI.');
+              return;
+            }
+
+            if (!process.env.OPENAI_API_KEY) {
+              core.setFailed('Missing OPENAI_API_KEY secret. Add it in repository settings.');
+              return;
+            }
 
             const { data: pr } = await github.rest.pulls.get({ owner, repo, pull_number: prNumber });
             const files = await github.paginate(github.rest.pulls.listFiles, {
