@@ -22,3 +22,20 @@ Provide these inputs when you run it:
 1. `title`
 2. `message`
 3. `mention` (optional, for example `<!channel>`)
+
+OpenAI PR assistant and review:
+
+Use `.github/workflows/openai-pr-review.yml` to:
+
+1. Reply with AI on new comments in pull requests.
+2. Post an automated AI code review when a pull request is opened or updated.
+
+Required configuration:
+
+1. Add repository secret `OPENAI_API_KEY`.
+2. Optional: add repository variable `OPENAI_MODEL` (default is `gpt-4.1-mini`).
+
+Events used by this workflow:
+
+1. `issue_comment` (new comments on PR threads)
+2. `pull_request` (`opened`, `reopened`, `synchronize`, `ready_for_review`)
