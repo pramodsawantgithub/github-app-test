@@ -7,6 +7,11 @@ on:
   schedule:
     - cron: '*/5 * * * *'
   workflow_dispatch: # manual trigger
+  workflow_run:
+    workflows:
+      - OpenAI PR Assistant
+    types:
+      - completed
 
 permissions:
   contents: read
@@ -15,7 +20,7 @@ permissions:
 jobs:
   open-pr:
     runs-on: ubuntu-latest
-    if: github.run_number <= 10
+    if: github.run_number <= 10 && (github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success')
 
     steps:
       - name: Checkout repository
