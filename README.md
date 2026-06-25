@@ -1,41 +1,167 @@
 # github-app-test
 
-Automatically opens a pull request from `develop` to `main` whenever a commit is pushed to `develop`.
+This repository contains GitHub Actions workflows for automatic PR creation, PR review/comment automation, and follow-up workflow notifications.
 
-Setup:
+## Workflow summary
 
-1. Push this repository to GitHub.
-2. In the repository settings, add these Actions secrets if you want the workflow to use your GitHub App (`my-test-app-936`):
-	- `AUTO_PR_APP_ID`
-	- `AUTO_PR_APP_PRIVATE_KEY`
-3. Install the app on this repository with pull request write access.
-4. Add `SLACK_WEBHOOK_URL` if you want to send manual team notifications to Slack.
+### 1. Auto Open PR From Develop
 
-If those secrets are not configured, the workflow falls back to the default `GITHUB_TOKEN`.
+File: `.github/workflows/auto-open-pr.yml`
 
-Manual Slack notification:
+Purpose:
 
-Use `.github/workflows/team-notification.yml` from the Actions tab when you want to notify the team on demand.
+1. Open or reuse a pull request from `develop` to `main`.
 
-Provide these inputs when you run it:
+Triggers:
 
-1. `title`
-2. `message`
-3. `mention` (optional, for example `<!channel>`)
+1. `push` on branch `develop`
+2. `workflow_dispatch` for manual execution from the Actions tab
 
-OpenAI PR assistant and review:
+Behavior:
 
-Use `.github/workflows/openai-pr-review.yml` to:
-
-1. Reply with AI on new comments in pull requests.
-2. Post an automated AI code review when a pull request is opened or updated.
+1. Checks out the repository.
+2. Creates a GitHub App token using `AUTO_PR_APP_ID` and `AUTO_PR_APP_PRIVATE_KEY`.
+3. Runs `scripts/create-pr.js`.
+4. If a PR from `develop` to `main` is already open, it reuses it and does not create a duplicate.
+5. If there are no commits between `develop` and `main`, no PR is created.
 
 Required configuration:
 
-1. Add repository secret `OPENAI_API_KEY`.
-2. Optional: add repository variable `OPENAI_MODEL` (default is `gpt-4.1-mini`).
+1. Repository secret `AUTO_PR_APP_ID`
+2. Repository secret `AUTO_PR_APP_PRIVATE_KEY`
+3. GitHub App installed on the repository with pull request write access
 
-Events used by this workflow:
+### 2. OpenAI PR Assistant
 
-1. `issue_comment` (new comments on PR threads)
-2. `pull_request` (`opened`, `reopened`, `synchronize`, `ready_for_review`)
+File: `.github/workflows/openai-pr-review.yml`
+
+Purpose:
+
+1. Reply to new PR conversation comments.
+2. Add an AI review when a PR is opened or updated.
+
+Triggers:
+
+1. `issue_comment` with type `created`
+2. `pull_request` with types `opened`, `reopened`, `synchronize`, `ready_for_review`
+
+Job conditions:
+
+1. `reply-on-pr-comment` runs only when the comment belongs to a PR and the actor is not `github-actions[bot]`.
+2. `ai-pr-review` runs only when the event is `pull_request`, the PR is not draft, and the actor is not `github-actions[bot]`.
+
+Behavior:
+
+1. In normal mode, it calls the OpenAI API and posts a reply or PR review.
+2. In test mode, it skips OpenAI API calls and posts mock responses instead.
+3. If OpenAI returns `insufficient_quota`, the workflow logs a warning and skips the AI action without failing the whole run.
+
+Required configuration:
+
+1. Repository secret `OPENAI_API_KEY` for real AI calls
+2. Optional repository variable `OPENAI_MODEL` (default `gpt-4.1-mini`)
+3. Optional repository variable `AI_TEST_MODE`
+
+Test mode:
+
+1. Set `AI_TEST_MODE=true` to test the workflow for free.
+2. In this mode, the workflow posts mock PR comments and mock PR reviews.
+
+Important scope note:
+
+1. The comment reply job handles new comments in the main PR conversation.
+2. It does not currently handle edited comments, deleted comments, or inline review comments on diff lines.
+
+### 3. Post PR Build Completion Message
+
+File: `.github/workflows/post-pr-build-complete.yml`
+
+Purpose:
+
+1. Run after the auto-PR workflow completes and print basic completion details.
+
+Trigger:
+
+1. `workflow_run` for workflow `Auto Open PR From Develop`
+2. Type `completed`
+
+Behavior:
+
+1. Runs after the upstream workflow completes with any conclusion.
+2. Prints workflow name, conclusion, and upstream run ID.
+3. It does not filter only success or failure; it runs for all completion states.
+
+### 4. Team Notification
+
+File: `.github/workflows/team-notification.yml`
+
+Purpose:
+
+1. Send a manual Slack notification from GitHub Actions.
+
+Trigger:
+
+1. `workflow_dispatch`
+
+Inputs:
+
+1. `title`
+2. `message`
+3. `mention` optional
+
+Required configuration:
+
+1. Repository secret `SLACK_WEBHOOK_URL`
+
+## Notes for knowledge sharing
+
+1. Auto Open PR From Develop no longer runs on a schedule.
+2. Auto Open PR From Develop no longer chains from OpenAI PR Assistant completion.
+3. OpenAI PR Assistant ignores `github-actions[bot]` to avoid bot loops.
+4. Post PR Build Completion Message is informational only; it does not create or modify PRs.
+
+## GitHub App details
+
+App used:
+
+1. `my-test-app-936`
+
+Where it is used:
+
+1. `.github/workflows/auto-open-pr.yml`
+2. Step `Create GitHub App token` uses `actions/create-github-app-token@v1`
+
+Secrets required by Actions:
+
+1. `AUTO_PR_APP_ID`
+2. `AUTO_PR_APP_PRIVATE_KEY`
+
+How to create values:
+
+1. In GitHub App settings, copy the numeric App ID and save it as `AUTO_PR_APP_ID`.
+2. Generate a private key (`.pem`), copy full content including begin/end lines, and save it as `AUTO_PR_APP_PRIVATE_KEY`.
+
+Required GitHub App permissions:
+
+1. Repository permissions:
+2. Pull requests: Read and write
+3. Contents: Read-only
+
+Installation scope:
+
+1. Install the app on this repository (or organization repositories including this repo).
+2. Confirm the target repository is selected in app installation settings.
+
+Why GitHub App is used:
+
+1. Actions gets a short-lived installation token at runtime.
+2. PR creation appears as the app identity (bot), which is expected.
+
+Troubleshooting GitHub App token step:
+
+1. `Resource not accessible by integration`:
+2. Check app is installed on this repository and has required permissions.
+3. `Could not load private key`:
+4. Re-copy the full `.pem` content into `AUTO_PR_APP_PRIVATE_KEY` secret.
+5. `Not Found` from create-github-app-token:
+6. Verify `AUTO_PR_APP_ID` belongs to the same app as the private key.
