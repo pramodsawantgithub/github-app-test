@@ -1,0 +1,65 @@
+name: Build and Upload Artifact
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+  pull_request:
+    branches:
+      - develop
+      - main
+
+jobs:
+  build-and-upload:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      
+      - name: Create build directory
+        run: |
+          mkdir -p build
+          cat > build/app.js << 'EOF'
+          // Built application artifact
+          console.log('This is a built application');
+          
+          const buildInfo = {
+            version: '1.0.0',
+            buildDate: new Date().toISOString(),
+            status: 'success'
+          };
+          
+          module.exports = buildInfo;
+          EOF
+      
+      - name: Create build metadata
+        run: |
+          cat > build/build-info.json << 'EOF'
+          {
+            "buildNumber": "${{ github.run_number }}",
+            "buildDate": "$(date -u +'%Y-%m-%dT%H:%M:%SZ')",
+            "commit": "${{ github.sha }}",
+            "branch": "${{ github.ref_name }}",
+            "actor": "${{ github.actor }}"
+          }
+          EOF
+      
+      - name: List build artifacts
+        run: |
+          echo "Build artifacts created:"
+          ls -la build/
+      
+      - name: Upload artifact (v4)
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifact
+          path: build/
+          retention-days: 30
+          compression-level: 6
