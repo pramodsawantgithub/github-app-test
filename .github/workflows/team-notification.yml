@@ -1,5 +1,5 @@
 name: Team Notification
-
+# this will be activated manually by a team member to send a notification to Slack
 on:
   workflow_dispatch:
     inputs:
