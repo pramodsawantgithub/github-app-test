@@ -1,4 +1,8 @@
 # github-app-test
+Switch git
+gh auth switch (it will auto switch to antoher)
+gh auth status.  (it will provide list of account and active status )
+gh auth login  (to login git pord or per)
 
 This repository contains GitHub Actions workflows for automatic PR creation, PR review/comment automation, and follow-up workflow notifications.
 
