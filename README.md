@@ -8,6 +8,8 @@ This repository contains GitHub Actions workflows for automatic PR creation, PR 
 
 
 [![Upload Artifact](https://github.com/pramodsawantgithub/github-app-test/actions/workflows/upload-artifact.yml/badge.svg)](https://github.com/pramodsawantgithub/github-app-test/actions/workflows/upload-artifact.yml)
+[![Create Package](https://github.com/pramodsawantgithub/github-app-test/actions/workflows/create-package.yml/badge.svg)](https://github.com/pramodsawantgithub/github-app-test/actions/workflows/create-package.yml)
+[![Release Build Artifact](https://github.com/pramodsawantgithub/github-app-test/actions/workflows/release-build-artifact.yml/badge.svg)](https://github.com/pramodsawantgithub/github-app-test/actions/workflows/release-build-artifact.yml)
 
 ## Workflow summary
 
@@ -120,12 +122,72 @@ Required configuration:
 
 1. Repository secret `SLACK_WEBHOOK_URL`
 
+### 5. Upload Artifact
+
+File: `.github/workflows/upload-artifact.yml`
+
+Purpose:
+
+1. Create a simple build output and upload it as an artifact.
+
+Triggers:
+
+1. `push` on branches `develop` and `main`
+2. `pull_request` targeting `develop` and `main`
+
+Behavior:
+
+1. Creates `build/app.js`.
+2. Prints grouped logs for `Build` and `Build tree`.
+3. Uploads `build/` as artifact `build-artifact`.
+
+### 6. Release Build Artifact
+
+File: `.github/workflows/release-build-artifact.yml`
+
+Purpose:
+
+1. Create or update a GitHub release from the uploaded build artifact.
+
+Trigger:
+
+1. `workflow_run` when `Upload Artifact` completes.
+
+Behavior:
+
+1. Runs only for successful `push` events where the source branch is `main`.
+2. Downloads `build-artifact` from the completed upstream run.
+3. Packages it as `build-artifact-<run_number>-<short_sha>.zip`.
+4. Creates the release if it does not exist.
+5. If the release already exists, uploads the asset with `--clobber` and updates title/notes.
+
+### 7. Create Package
+
+File: `.github/workflows/create-package.yml`
+
+Purpose:
+
+1. Build a source package archive and upload it as an artifact.
+
+Triggers:
+
+1. `push` on branches `develop` and `main`
+2. `workflow_dispatch` for manual execution
+
+Behavior:
+
+1. Checks out repository content.
+2. Runs `docker version` and prints grouped Docker logs.
+3. Creates `package/source-package-<run_number>.tar.gz` from `README.md`, `build`, `scripts`, and `.github`.
+4. Uploads `package/` as artifact `source-package`.
+
 ## Notes for knowledge sharing
 
 1. Auto Open PR From Develop no longer runs on a schedule.
 2. Auto Open PR From Develop no longer chains from OpenAI PR Assistant completion.
 3. OpenAI PR Assistant ignores `github-actions[bot]` to avoid bot loops.
 4. Post PR Build Completion Message is informational only; it does not create or modify PRs.
+5. Release Build Artifact runs only for successful pushes on `main`.
 
 ## GitHub App details
 
