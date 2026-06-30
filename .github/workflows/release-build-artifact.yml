@@ -17,6 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
       RUN_ID: ${{ github.event.workflow_run.id }}
       RUN_NUMBER: ${{ github.event.workflow_run.run_number }}
       HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
@@ -53,6 +54,17 @@ jobs:
 
       - name: Create GitHub release
         run: |
-          gh release create "${{ steps.package.outputs.release_tag }}" "release/${{ steps.package.outputs.artifact_name }}" \
-            --title "Build artifact ${RUN_NUMBER}" \
-            --notes "Artifact from workflow run ${RUN_ID} on branch ${HEAD_BRANCH} for commit ${HEAD_SHA}."
+          release_tag="${{ steps.package.outputs.release_tag }}"
+          artifact_path="release/${{ steps.package.outputs.artifact_name }}"
+          release_title="Build artifact ${RUN_NUMBER}"
+          release_notes="Artifact from workflow run ${RUN_ID} on branch ${HEAD_BRANCH} for commit ${HEAD_SHA}."
+
+          if gh release view "$release_tag" --repo "$GH_REPO" >/dev/null 2>&1; then
+            gh release upload "$release_tag" "$artifact_path" --repo "$GH_REPO" --clobber
+            gh release edit "$release_tag" --repo "$GH_REPO" --title "$release_title" --notes "$release_notes"
+          else
+            gh release create "$release_tag" "$artifact_path" \
+              --repo "$GH_REPO" \
+              --title "$release_title" \
+              --notes "$release_notes"
+          fi
