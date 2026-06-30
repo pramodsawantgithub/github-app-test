@@ -6,6 +6,9 @@ gh auth login  (to login git pord or per)
 
 This repository contains GitHub Actions workflows for automatic PR creation, PR review/comment automation, and follow-up workflow notifications.
 
+
+[![Upload Artifact](https://github.com/pramodsawantgithub/github-app-test/actions/workflows/upload-artifact.yml/badge.svg)](https://github.com/pramodsawantgithub/github-app-test/actions/workflows/upload-artifact.yml)
+
 ## Workflow summary
 
 ### 1. Auto Open PR From Develop
