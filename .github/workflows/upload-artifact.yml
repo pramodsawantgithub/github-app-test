@@ -1,0 +1,49 @@
+name: Upload Artifact
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+  pull_request:
+    branches:
+      - develop
+      - main
+
+jobs:
+  build-and-upload:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create build directory
+        run: |
+          echo "::group::Build"
+          mkdir -p build
+          echo "// Build artifact generated at $(date)" > build/app.js
+          echo "Build artifact created successfully"
+          echo "::endgroup::"
+
+      - name: Show build tree
+        run: |
+          echo "::group::Build tree"
+          if command -v tree >/dev/null 2>&1; then
+            tree build
+          else
+            find build -maxdepth 2 -print | sort
+          fi
+          echo "::endgroup::"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifact
+          path: build/
+          retention-days: 30
+
+      - name: List artifacts
+        run: |
+          echo "Artifact uploaded successfully"
+          ls -la build/

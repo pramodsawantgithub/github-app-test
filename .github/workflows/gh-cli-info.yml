@@ -18,24 +18,5 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: GH CLI - Environment
-        run: env
-
-      - name: GH CLI - Version
-        run: gh --version
-
-      - name: GH CLI - Auth Status
-        run: gh auth status
-        continue-on-error: true
-
-      - name: GH CLI - Repo List
-        run: gh repo list ${{ github.repository_owner }} --limit 20
-        continue-on-error: true
-
-      - name: GH CLI - Issue List
-        run: gh issue list --repo ${{ github.repository }}
-        continue-on-error: true
-
-      - name: GH CLI - Workflow List
-        run: gh workflow list --repo ${{ github.repository }}
-        continue-on-error: true
+      - name: GH CLI - Info Script
+        run: bash ./scripts/gh-cli-info.sh
