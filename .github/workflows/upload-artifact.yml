@@ -20,9 +20,21 @@ jobs:
 
       - name: Create build directory
         run: |
+          echo "::group::Build"
           mkdir -p build
           echo "// Build artifact generated at $(date)" > build/app.js
           echo "Build artifact created successfully"
+          echo "::endgroup::"
+
+      - name: Show build tree
+        run: |
+          echo "::group::Build tree"
+          if command -v tree >/dev/null 2>&1; then
+            tree build
+          else
+            find build -maxdepth 2 -print | sort
+          fi
+          echo "::endgroup::"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
