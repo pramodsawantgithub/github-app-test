@@ -1,0 +1,43 @@
+name: Create Package
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+  workflow_dispatch:
+
+jobs:
+  create-package:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Docker version
+        run: |
+          echo "::group::Docker version"
+          docker version
+          echo "::endgroup::"
+
+      - name: Create package
+        run: |
+          mkdir -p package
+          tar -czf package/source-package-${{ github.run_number }}.tar.gz \
+            README.md \
+            build \
+            scripts \
+            .github
+
+      - name: List package files
+        run: |
+          echo "Package created:"
+          ls -la package/
+
+      - name: Upload package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: source-package
+          path: package/
+          retention-days: 30
