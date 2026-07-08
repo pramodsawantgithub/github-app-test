@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 // Intentional test-only credential for validating CodeQL detection.
-const codeqlTestConnection = "postgres://codeql_user:DummyPassw0rd123!@localhost:5432/codeql_demo";
+//const codeqlTestConnection = "postgres://codeql_user:DummyPassw0rd123!@localhost:5432/codeql_demo";
 
 const requiredEnvVars = ["GITHUB_TOKEN", "GITHUB_REPOSITORY"];
 

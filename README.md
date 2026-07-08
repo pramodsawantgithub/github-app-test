@@ -1,10 +1,14 @@
 # github-app-test
-Switch git
-gh auth switch (it will auto switch to antoher)
-gh auth status.  (it will provide list of account and active status )
-gh auth login  (to login git pord or per)
+## GitHub CLI quick commands
 
-This repository contains GitHub Actions workflows for automatic PR creation, PR review/comment automation, and follow-up workflow notifications.
+1. Switch active GitHub account:
+2. `gh auth switch`
+3. Show logged in accounts and active account:
+4. `gh auth status`
+5. Login to GitHub.com or GitHub Enterprise:
+6. `gh auth login`
+
+This repository contains GitHub Actions workflows for automatic PR creation, PR review/comment automation, build and release automation, Docker image publishing, and CodeQL security scanning.
 
 
 [![Upload Artifact](https://github.com/pramodsawantgithub/github-app-test/actions/workflows/upload-artifact.yml/badge.svg)](https://github.com/pramodsawantgithub/github-app-test/actions/workflows/upload-artifact.yml)
@@ -210,6 +214,58 @@ Required configuration:
 1. Repository secret `DOCKERHUB_USERNAME`
 2. Repository secret `DOCKERHUB_TOKEN`
 3. Environment `production` with required reviewers if approval is needed
+
+### 9. Build SQL Image
+
+File: `.github/workflows/build-sql-image.yml`
+
+Purpose:
+
+1. Build and push a Postgres-based SQL image to Docker Hub.
+
+Triggers:
+
+1. `push` on branch `main` when `sql/**`, `db/sql/**`, or workflow file changes
+2. `workflow_dispatch` for manual execution
+
+Behavior:
+
+1. Checks out repository content.
+2. Builds Docker context from `sql/` or `db/sql/`.
+3. Creates a Postgres Dockerfile and copies init scripts to `/docker-entrypoint-initdb.d/`.
+4. Logs in to Docker Hub and pushes image tags:
+5. `latest`
+6. `build-<run_number>`
+7. `sha-<full_commit_sha>`
+
+Required configuration:
+
+1. Repository secret `DOCKERHUB_USERNAME`
+2. Repository secret `DOCKERHUB_TOKEN`
+
+### 10. CodeQL Advanced
+
+File: `.github/workflows/codeql.yml`
+
+Purpose:
+
+1. Run CodeQL security and quality analysis for repository code and workflows.
+
+Triggers:
+
+1. `push` on branch `develop`
+2. `pull_request` targeting branch `develop`
+3. Weekly schedule
+
+Behavior:
+
+1. Scans `actions` and `javascript-typescript` language sets.
+2. Runs with query suites `security-extended` and `security-and-quality`.
+3. Uploads findings to GitHub code scanning alerts.
+
+Required configuration:
+
+1. No additional repository secrets are required for standard scanning.
 
 ## Notes for knowledge sharing
 
