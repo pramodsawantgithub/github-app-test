@@ -10,6 +10,7 @@ This repository contains GitHub Actions workflows for automatic PR creation, PR 
 [![Upload Artifact](https://github.com/pramodsawantgithub/github-app-test/actions/workflows/upload-artifact.yml/badge.svg)](https://github.com/pramodsawantgithub/github-app-test/actions/workflows/upload-artifact.yml)
 [![Create Package](https://github.com/pramodsawantgithub/github-app-test/actions/workflows/create-package.yml/badge.svg)](https://github.com/pramodsawantgithub/github-app-test/actions/workflows/create-package.yml)
 [![Release Build Artifact](https://github.com/pramodsawantgithub/github-app-test/actions/workflows/release-build-artifact.yml/badge.svg)](https://github.com/pramodsawantgithub/github-app-test/actions/workflows/release-build-artifact.yml)
+[![Upload Build To Docker](https://github.com/pramodsawantgithub/github-app-test/actions/workflows/upload-build-to-docker.yml/badge.svg)](https://github.com/pramodsawantgithub/github-app-test/actions/workflows/upload-build-to-docker.yml)
 
 ## Workflow summary
 
@@ -181,6 +182,35 @@ Behavior:
 3. Creates `package/source-package-<run_number>.tar.gz` from `README.md`, `build`, `scripts`, and `.github`.
 4. Uploads `package/` as artifact `source-package`.
 
+### 8. Upload Build To Docker
+
+File: `.github/workflows/upload-build-to-docker.yml`
+
+Purpose:
+
+1. Build a Docker image from the uploaded build artifact and push it to Docker Hub.
+
+Trigger:
+
+1. `workflow_run` when `Upload Artifact` completes.
+
+Behavior:
+
+1. Runs only for successful `push` events where the source branch is `main`.
+2. Downloads `build-artifact` from the completed upstream run.
+3. Creates a Docker build context and Dockerfile from the artifact output.
+4. Logs in to Docker Hub and pushes image tags:
+5. `latest`
+6. `build-<run_number>`
+7. `sha-<full_commit_sha>`
+8. Uses the `production` environment so required reviewers can approve before push.
+
+Required configuration:
+
+1. Repository secret `DOCKERHUB_USERNAME`
+2. Repository secret `DOCKERHUB_TOKEN`
+3. Environment `production` with required reviewers if approval is needed
+
 ## Notes for knowledge sharing
 
 1. Auto Open PR From Develop no longer runs on a schedule.
@@ -188,6 +218,7 @@ Behavior:
 3. OpenAI PR Assistant ignores `github-actions[bot]` to avoid bot loops.
 4. Post PR Build Completion Message is informational only; it does not create or modify PRs.
 5. Release Build Artifact runs only for successful pushes on `main`.
+6. Upload Build To Docker runs through environment `production`, so approvals can be enforced.
 
 ## GitHub App details
 

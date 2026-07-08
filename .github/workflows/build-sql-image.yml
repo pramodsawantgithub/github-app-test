@@ -1,0 +1,75 @@
+name: Build SQL Image
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/build-sql-image.yml
+      - sql/**
+      - db/sql/**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  docker-sql-image:
+    runs-on: ubuntu-latest
+    env:
+      IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}-sql
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Prepare SQL docker context
+        run: |
+          mkdir -p docker-context/initdb
+
+          if [ -d sql ]; then
+            cp -R sql/. docker-context/initdb/
+          elif [ -d db/sql ]; then
+            cp -R db/sql/. docker-context/initdb/
+          else
+            cat > docker-context/initdb/001-placeholder.sql << 'EOF'
+            SELECT 'Add .sql files under sql/ or db/sql/ to initialize the database.' AS message;
+            EOF
+          fi
+
+      - name: Create Dockerfile for SQL image
+        run: |
+          cat > docker-context/Dockerfile << 'EOF'
+          FROM postgres:16-alpine
+          COPY initdb/ /docker-entrypoint-initdb.d/
+          EOF
+
+      - name: Show docker context
+        run: |
+          echo "::group::Docker context"
+          if command -v tree >/dev/null 2>&1; then
+            tree docker-context
+          else
+            find docker-context -maxdepth 3 -print | sort
+          fi
+          echo "::endgroup::"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push SQL image
+        uses: docker/build-push-action@v6
+        with:
+          context: docker-context
+          file: docker-context/Dockerfile
+          push: true
+          tags: |
+            ${{ env.IMAGE_NAME }}:latest
+            ${{ env.IMAGE_NAME }}:build-${{ github.run_number }}
+            ${{ env.IMAGE_NAME }}:sha-${{ github.sha }}
