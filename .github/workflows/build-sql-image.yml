@@ -32,17 +32,15 @@ jobs:
           elif [ -d db/sql ]; then
             cp -R db/sql/. docker-context/initdb/
           else
-            cat > docker-context/initdb/001-placeholder.sql << 'EOF'
-            SELECT 'Add .sql files under sql/ or db/sql/ to initialize the database.' AS message;
-            EOF
+            printf "%s\n" "SELECT 'Add .sql files under sql/ or db/sql/ to initialize the database.' AS message;" > docker-context/initdb/001-placeholder.sql
           fi
 
       - name: Create Dockerfile for SQL image
         run: |
-          cat > docker-context/Dockerfile << 'EOF'
-          FROM postgres:16-alpine
-          COPY initdb/ /docker-entrypoint-initdb.d/
-          EOF
+          printf "%s\n" \
+            "FROM postgres:16-alpine" \
+            "COPY initdb/ /docker-entrypoint-initdb.d/" \
+            > docker-context/Dockerfile
 
       - name: Show docker context
         run: |
