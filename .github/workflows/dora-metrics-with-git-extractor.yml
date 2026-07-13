@@ -1,0 +1,68 @@
+name: DORA Metrics With Git Extractor
+
+on:
+  workflow_dispatch:
+    inputs:
+      lookback_days:
+        description: Number of trailing days for DORA metrics
+        required: false
+        default: "30"
+        type: string
+      branch:
+        description: Branch for workflow run lookup
+        required: false
+        default: main
+        type: string
+      workflow_id:
+        description: Optional deployment workflow id or file name (for example release-build-artifact.yml)
+        required: false
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+  pull-requests: read
+
+jobs:
+  dora-metrics:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract DORA metrics
+        id: extractor
+        uses: pramodsawantgithub/git-extractor-action@main
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          include-dora-metrics: "true"
+          dora-lookback-days: ${{ inputs.lookback_days }}
+          dora-branch: ${{ inputs.branch }}
+          dora-workflow-id: ${{ inputs.workflow_id }}
+
+      - name: Print DORA metrics outputs
+        env:
+          DORA_LOOKBACK_DAYS: ${{ steps.extractor.outputs.dora-lookback-days }}
+          DORA_BRANCH: ${{ steps.extractor.outputs.dora-branch }}
+          DORA_WORKFLOW_ID: ${{ steps.extractor.outputs.dora-workflow-id }}
+          DORA_DEPLOYMENT_COUNT: ${{ steps.extractor.outputs.dora-deployment-count }}
+          DORA_SUCCESSFUL_DEPLOYMENT_COUNT: ${{ steps.extractor.outputs.dora-successful-deployment-count }}
+          DORA_FAILED_DEPLOYMENT_COUNT: ${{ steps.extractor.outputs.dora-failed-deployment-count }}
+          DORA_DEPLOYMENT_FREQUENCY_PER_DAY: ${{ steps.extractor.outputs.dora-deployment-frequency-per-day }}
+          DORA_CHANGE_FAILURE_RATE: ${{ steps.extractor.outputs.dora-change-failure-rate }}
+          DORA_LEAD_TIME_HOURS: ${{ steps.extractor.outputs.dora-lead-time-hours }}
+          DORA_MTTR_HOURS: ${{ steps.extractor.outputs.dora-mttr-hours }}
+          DORA_JSON: ${{ steps.extractor.outputs.dora-json }}
+        run: |
+          echo "Lookback days: ${DORA_LOOKBACK_DAYS}"
+          echo "Branch: ${DORA_BRANCH}"
+          echo "Workflow filter: ${DORA_WORKFLOW_ID}"
+          echo "Deployment count: ${DORA_DEPLOYMENT_COUNT}"
+          echo "Successful deployments: ${DORA_SUCCESSFUL_DEPLOYMENT_COUNT}"
+          echo "Failed deployments: ${DORA_FAILED_DEPLOYMENT_COUNT}"
+          echo "Deployment frequency per day: ${DORA_DEPLOYMENT_FREQUENCY_PER_DAY}"
+          echo "Change failure rate (%): ${DORA_CHANGE_FAILURE_RATE}"
+          echo "Lead time (hours): ${DORA_LEAD_TIME_HOURS}"
+          echo "MTTR (hours): ${DORA_MTTR_HOURS}"
+          printf 'DORA JSON: %s\n' "${DORA_JSON}"
