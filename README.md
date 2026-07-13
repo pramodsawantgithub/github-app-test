@@ -1,5 +1,5 @@
 # github-app-test
-## GitHub CLI quick commands
+## GitHub CLI quick commands #
 
 1. Switch active GitHub account:
 2. `gh auth switch`
