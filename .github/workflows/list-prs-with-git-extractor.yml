@@ -36,12 +36,17 @@ jobs:
           pr-number: ${{ github.event.pull_request.number || inputs.pr_number }}
 
       - name: Print resolved PR from extractor
+        env:
+          COMMIT_SHA: ${{ steps.extractor.outputs.commit-sha }}
+          RESOLVED_PR_NUMBER: ${{ steps.extractor.outputs.pr-number }}
+          RESOLVED_PR_TITLE: ${{ steps.extractor.outputs.pr-title }}
+          RESOLVED_PR_JSON: ${{ steps.extractor.outputs.pr-json }}
         run: |
-          echo "Commit SHA: ${{ steps.extractor.outputs.commit-sha }}"
-          echo "Resolved PR number: ${{ steps.extractor.outputs.pr-number }}"
-          echo "Resolved PR title: ${{ steps.extractor.outputs.pr-title }}"
-          echo "Resolved PR JSON: ${{ steps.extractor.outputs.pr-json }}"
-          if [ -z "${{ steps.extractor.outputs.pr-number }}" ]; then
+          echo "Commit SHA: ${COMMIT_SHA}"
+          echo "Resolved PR number: ${RESOLVED_PR_NUMBER}"
+          echo "Resolved PR title: ${RESOLVED_PR_TITLE}"
+          printf 'Resolved PR JSON: %s\n' "${RESOLVED_PR_JSON}"
+          if [ -z "${RESOLVED_PR_NUMBER}" ]; then
             echo "No PR resolved. Use pull_request trigger or pass workflow_dispatch input pr_number."
           fi
 
