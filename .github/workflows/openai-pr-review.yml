@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Reply to PR comment using OpenAI
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         env:
           AI_TEST_MODE: ${{ vars.AI_TEST_MODE || 'false' }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -136,7 +136,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: AI code review for pull request
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         env:
           AI_TEST_MODE: ${{ vars.AI_TEST_MODE || 'false' }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
