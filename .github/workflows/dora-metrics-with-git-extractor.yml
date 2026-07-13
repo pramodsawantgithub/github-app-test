@@ -33,7 +33,7 @@ jobs:
 
       - name: Extract DORA metrics
         id: extractor
-        uses: pramodsawantgithub/git-extractor-action@main
+        uses: pramodsawantgithub/git-extractor-action@c555ded
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           include-dora-metrics: "true"
