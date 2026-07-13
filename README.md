@@ -1,10 +1,14 @@
 # github-app-test
-Switch git
-gh auth switch (it will auto switch to antoher)
-gh auth status.  (it will provide list of account and active status )
-gh auth login  (to login git pord or per)
+## GitHub CLI quick commands #
 
-This repository contains GitHub Actions workflows for automatic PR creation, PR review/comment automation, and follow-up workflow notifications.
+1. Switch active GitHub account:
+2. `gh auth switch`
+3. Show logged in accounts and active account:
+4. `gh auth status`
+5. Login to GitHub.com or GitHub Enterprise:
+6. `gh auth login`
+
+This repository contains GitHub Actions workflows for automatic PR creation, PR review/comment automation, build and release automation, Docker image publishing, and CodeQL security scanning.
 
 
 [![Upload Artifact](https://github.com/pramodsawantgithub/github-app-test/actions/workflows/upload-artifact.yml/badge.svg)](https://github.com/pramodsawantgithub/github-app-test/actions/workflows/upload-artifact.yml)
@@ -211,6 +215,143 @@ Required configuration:
 2. Repository secret `DOCKERHUB_TOKEN`
 3. Environment `production` with required reviewers if approval is needed
 
+### 9. Build SQL Image
+
+File: `.github/workflows/build-sql-image.yml`
+
+Purpose:
+
+1. Build and push a Postgres-based SQL image to Docker Hub.
+
+Triggers:
+
+1. `push` on branch `main` when `sql/**`, `db/sql/**`, or workflow file changes
+2. `workflow_dispatch` for manual execution
+
+Behavior:
+
+1. Checks out repository content.
+2. Builds Docker context from `sql/` or `db/sql/`.
+3. Creates a Postgres Dockerfile and copies init scripts to `/docker-entrypoint-initdb.d/`.
+4. Logs in to Docker Hub and pushes image tags:
+5. `latest`
+6. `build-<run_number>`
+7. `sha-<full_commit_sha>`
+
+Required configuration:
+
+1. Repository secret `DOCKERHUB_USERNAME`
+2. Repository secret `DOCKERHUB_TOKEN`
+
+### 10. CodeQL Advanced
+
+File: `.github/workflows/codeql.yml`
+
+Purpose:
+
+1. Run CodeQL security and quality analysis for repository code and workflows.
+
+Triggers:
+
+1. `push` on branch `develop`
+2. `pull_request` targeting branch `develop`
+3. Weekly schedule
+
+Behavior:
+
+1. Scans `actions` and `javascript-typescript` language sets.
+2. Runs with query suites `security-extended` and `security-and-quality`.
+3. Uploads findings to GitHub code scanning alerts.
+
+Required configuration:
+
+1. No additional repository secrets are required for standard scanning.
+
+### 11. List PRs With Git Extractor
+
+File: `.github/workflows/list-prs-with-git-extractor.yml`
+
+Purpose:
+
+1. Call the reusable `git-extractor-action` action.
+2. Resolve commit and pull request context for the current run.
+3. Print resolved PR details plus open and closed PR lists from action outputs.
+
+Triggers:
+
+1. `workflow_dispatch` with optional input `pr_number`
+2. `push` on branches `develop` and `main`
+3. `pull_request` targeting branches `develop` and `main`
+
+Behavior:
+
+1. Checks out repository content.
+2. Calls `pramodsawantgithub/git-extractor-action@main`.
+3. Passes `secrets.GITHUB_TOKEN` and an optional `pr-number` input.
+4. Reads outputs such as `commit-sha`, `pr-id`, `pr-number`, `pr-title`, and `pr-json` from the action step.
+5. Prints resolved PR details safely in shell output.
+6. Reads and prints `open-pr-count`, `open-prs-json`, `closed-pr-count`, and `closed-prs-json` from the same action step.
+
+How the cross-repository action call works:
+
+1. This repository starts the workflow run from `.github/workflows/list-prs-with-git-extractor.yml`.
+2. The `uses: pramodsawantgithub/git-extractor-action@main` step tells GitHub Actions to fetch the action from the `git-extractor-action` repository at ref `main`.
+3. GitHub reads that repository's `action.yml` file to find the runtime and entrypoint.
+4. The action runs its bundled JavaScript and uses Octokit to query commit and PR data.
+5. The action sets outputs.
+6. This repository reads those outputs through `steps.extractor.outputs.*` in later steps.
+
+Required configuration:
+
+1. Repository must have access to `pramodsawantgithub/git-extractor-action@main`.
+2. `GITHUB_TOKEN` must have `contents: read` and `pull-requests: read` permissions.
+
+Usage notes:
+
+1. On `pull_request` events, the workflow usually resolves the PR automatically from `github.event.pull_request.number`.
+2. On `workflow_dispatch`, pass `pr_number` if you want deterministic PR lookup.
+3. On `push`, PR resolution depends on whether the current commit is associated with a pull request.
+
+### 12. DORA Metrics With Git Extractor
+
+File: `.github/workflows/dora-metrics-with-git-extractor.yml`
+
+Purpose:
+
+1. Calculate DORA metrics from repository workflow run history through `git-extractor-action`.
+2. Print deployment frequency, change failure rate, lead time, MTTR, and full JSON output.
+
+Trigger:
+
+1. `workflow_dispatch`
+
+Inputs:
+
+1. `lookback_days` default `30`
+2. `branch` default `main`
+3. `workflow_id` optional deployment workflow filter (for example `release-build-artifact.yml`)
+
+Behavior:
+
+1. Checks out repository content.
+2. Calls `pramodsawantgithub/git-extractor-action` pinned to a full commit SHA.
+3. Passes `include-dora-metrics=true` and DORA filter inputs.
+4. Prints outputs such as `dora-deployment-count`, `dora-deployment-frequency-per-day`, `dora-change-failure-rate`, `dora-lead-time-hours`, `dora-mttr-hours`, and `dora-json`.
+
+Required configuration:
+
+1. `GITHUB_TOKEN` must have `actions: read` and `contents: read` permissions.
+
+## Dependency updates
+
+Dependabot configuration file: `.github/dependabot.yml`
+
+Behavior:
+
+1. Scans GitHub Actions dependencies weekly.
+2. Opens pull requests for workflow dependency updates.
+3. Keeps pinned action references updated through reviewable PRs.
+
 ## Notes for knowledge sharing
 
 1. Auto Open PR From Develop no longer runs on a schedule.
@@ -219,6 +360,9 @@ Required configuration:
 4. Post PR Build Completion Message is informational only; it does not create or modify PRs.
 5. Release Build Artifact runs only for successful pushes on `main`.
 6. Upload Build To Docker runs through environment `production`, so approvals can be enforced.
+7. List PRs With Git Extractor prints PR JSON safely using environment variables so shell parsing does not break on quotes.
+8. DORA Metrics With Git Extractor uses a full action commit SHA to keep runs reproducible.
+9. Dependabot can automate workflow dependency update PRs, including action ref bumps.
 
 ## GitHub App details
 

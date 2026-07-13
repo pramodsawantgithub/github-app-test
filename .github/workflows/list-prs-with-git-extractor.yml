@@ -1,0 +1,61 @@
+name: List PRs With Git Extractor
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Pull request number to resolve (optional)
+        required: false
+        type: string
+  pull_request:
+    branches:
+      - develop
+      - main
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  list-prs:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract commit and PR context
+        id: extractor
+        uses: pramodsawantgithub/git-extractor-action@main
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          pr-number: ${{ github.event.pull_request.number || inputs.pr_number }}
+
+      - name: Print resolved PR from extractor
+        env:
+          COMMIT_SHA: ${{ steps.extractor.outputs.commit-sha }}
+          RESOLVED_PR_ID: ${{ steps.extractor.outputs.pr-id }}
+          RESOLVED_PR_NUMBER: ${{ steps.extractor.outputs.pr-number }}
+          RESOLVED_PR_TITLE: ${{ steps.extractor.outputs.pr-title }}
+          RESOLVED_PR_JSON: ${{ steps.extractor.outputs.pr-json }}
+        run: |
+          echo "Commit SHA: ${COMMIT_SHA}"
+          echo "Resolved PR id: ${RESOLVED_PR_ID}"
+          echo "Resolved PR number: ${RESOLVED_PR_NUMBER}"
+          echo "Resolved PR title: ${RESOLVED_PR_TITLE}"
+          printf 'Resolved PR JSON: %s\n' "${RESOLVED_PR_JSON}"
+          if [ -z "${RESOLVED_PR_NUMBER}" ]; then
+            echo "No PR resolved. Use pull_request trigger or pass workflow_dispatch input pr_number."
+          fi
+
+      - name: Print open and closed PR lists from extractor
+        env:
+          OPEN_PR_COUNT: ${{ steps.extractor.outputs.open-pr-count }}
+          OPEN_PRS_JSON: ${{ steps.extractor.outputs.open-prs-json }}
+          CLOSED_PR_COUNT: ${{ steps.extractor.outputs.closed-pr-count }}
+          CLOSED_PRS_JSON: ${{ steps.extractor.outputs.closed-prs-json }}
+        run: |
+          echo "Open PR count: ${OPEN_PR_COUNT}"
+          printf 'Open PR list: %s\n' "${OPEN_PRS_JSON}"
+          echo "Closed PR count: ${CLOSED_PR_COUNT}"
+          printf 'Closed PR list: %s\n' "${CLOSED_PRS_JSON}"
