@@ -38,11 +38,13 @@ jobs:
       - name: Print resolved PR from extractor
         env:
           COMMIT_SHA: ${{ steps.extractor.outputs.commit-sha }}
+          RESOLVED_PR_ID: ${{ steps.extractor.outputs.pr-id }}
           RESOLVED_PR_NUMBER: ${{ steps.extractor.outputs.pr-number }}
           RESOLVED_PR_TITLE: ${{ steps.extractor.outputs.pr-title }}
           RESOLVED_PR_JSON: ${{ steps.extractor.outputs.pr-json }}
         run: |
           echo "Commit SHA: ${COMMIT_SHA}"
+          echo "Resolved PR id: ${RESOLVED_PR_ID}"
           echo "Resolved PR number: ${RESOLVED_PR_NUMBER}"
           echo "Resolved PR title: ${RESOLVED_PR_TITLE}"
           printf 'Resolved PR JSON: %s\n' "${RESOLVED_PR_JSON}"
@@ -50,35 +52,14 @@ jobs:
             echo "No PR resolved. Use pull_request trigger or pass workflow_dispatch input pr_number."
           fi
 
-      - name: List open PRs for this repository
-        uses: actions/github-script@v7
+      - name: Print open and closed PR lists from extractor
         env:
-          RESOLVED_PR_NUMBER: ${{ steps.extractor.outputs.pr-number }}
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const { owner, repo } = context.repo;
-            const pulls = await github.rest.pulls.list({
-              owner,
-              repo,
-              state: 'open',
-              per_page: 50,
-            });
-
-            const list = pulls.data.map((pr) => ({
-              number: pr.number,
-              title: pr.title,
-              state: pr.state,
-              url: pr.html_url,
-              author: pr.user?.login ?? '',
-            }));
-
-            core.info(`Open PR count: ${list.length}`);
-            core.info(`Open PR list: ${JSON.stringify(list, null, 2)}`);
-
-            const resolved = process.env.RESOLVED_PR_NUMBER;
-            if (resolved) {
-              core.info(`Extractor resolved PR number: ${resolved}`);
-            } else {
-              core.warning('Extractor did not resolve a PR number for this commit.');
-            }
+          OPEN_PR_COUNT: ${{ steps.extractor.outputs.open-pr-count }}
+          OPEN_PRS_JSON: ${{ steps.extractor.outputs.open-prs-json }}
+          CLOSED_PR_COUNT: ${{ steps.extractor.outputs.closed-pr-count }}
+          CLOSED_PRS_JSON: ${{ steps.extractor.outputs.closed-prs-json }}
+        run: |
+          echo "Open PR count: ${OPEN_PR_COUNT}"
+          printf 'Open PR list: %s\n' "${OPEN_PRS_JSON}"
+          echo "Closed PR count: ${CLOSED_PR_COUNT}"
+          printf 'Closed PR list: %s\n' "${CLOSED_PRS_JSON}"

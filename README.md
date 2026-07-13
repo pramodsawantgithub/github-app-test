@@ -267,6 +267,51 @@ Required configuration:
 
 1. No additional repository secrets are required for standard scanning.
 
+### 11. List PRs With Git Extractor
+
+File: `.github/workflows/list-prs-with-git-extractor.yml`
+
+Purpose:
+
+1. Call the reusable `git-extractor-action` action.
+2. Resolve commit and pull request context for the current run.
+3. Print the resolved PR details and list open pull requests from the repository.
+
+Triggers:
+
+1. `workflow_dispatch` with optional input `pr_number`
+2. `push` on branches `develop` and `main`
+3. `pull_request` targeting branches `develop` and `main`
+
+Behavior:
+
+1. Checks out repository content.
+2. Calls `pramodsawantgithub/git-extractor-action@main`.
+3. Passes `secrets.GITHUB_TOKEN` and an optional `pr-number` input.
+4. Reads outputs such as `commit-sha`, `pr-number`, `pr-title`, and `pr-json` from the action step.
+5. Prints resolved PR details safely in shell output.
+6. Uses `actions/github-script` to list open PRs with the GitHub REST API.
+
+How the cross-repository action call works:
+
+1. This repository starts the workflow run from `.github/workflows/list-prs-with-git-extractor.yml`.
+2. The `uses: pramodsawantgithub/git-extractor-action@main` step tells GitHub Actions to fetch the action from the `git-extractor-action` repository at ref `main`.
+3. GitHub reads that repository's `action.yml` file to find the runtime and entrypoint.
+4. The action runs its bundled JavaScript and uses Octokit to query commit and PR data.
+5. The action sets outputs.
+6. This repository reads those outputs through `steps.extractor.outputs.*` in later steps.
+
+Required configuration:
+
+1. Repository must have access to `pramodsawantgithub/git-extractor-action@main`.
+2. `GITHUB_TOKEN` must have `contents: read` and `pull-requests: read` permissions.
+
+Usage notes:
+
+1. On `pull_request` events, the workflow usually resolves the PR automatically from `github.event.pull_request.number`.
+2. On `workflow_dispatch`, pass `pr_number` if you want deterministic PR lookup.
+3. On `push`, PR resolution depends on whether the current commit is associated with a pull request.
+
 ## Notes for knowledge sharing
 
 1. Auto Open PR From Develop no longer runs on a schedule.
@@ -275,6 +320,7 @@ Required configuration:
 4. Post PR Build Completion Message is informational only; it does not create or modify PRs.
 5. Release Build Artifact runs only for successful pushes on `main`.
 6. Upload Build To Docker runs through environment `production`, so approvals can be enforced.
+7. List PRs With Git Extractor prints PR JSON safely using environment variables so shell parsing does not break on quotes.
 
 ## GitHub App details
 
