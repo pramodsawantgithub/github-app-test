@@ -1,0 +1,65 @@
+name: List PRs With Git Extractor
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - develop
+      - main
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  list-prs:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract commit and PR context
+        id: extractor
+        uses: pramodsawantgithub/git-extractor-action@main
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Print resolved PR from extractor
+        run: |
+          echo "Resolved PR number: ${{ steps.extractor.outputs.pr-number }}"
+          echo "Resolved PR title: ${{ steps.extractor.outputs.pr-title }}"
+          echo "Resolved PR JSON: ${{ steps.extractor.outputs.pr-json }}"
+
+      - name: List open PRs for this repository
+        uses: actions/github-script@v7
+        env:
+          RESOLVED_PR_NUMBER: ${{ steps.extractor.outputs.pr-number }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { owner, repo } = context.repo;
+            const pulls = await github.rest.pulls.list({
+              owner,
+              repo,
+              state: 'open',
+              per_page: 50,
+            });
+
+            const list = pulls.data.map((pr) => ({
+              number: pr.number,
+              title: pr.title,
+              state: pr.state,
+              url: pr.html_url,
+              author: pr.user?.login ?? '',
+            }));
+
+            core.info(`Open PR count: ${list.length}`);
+            core.info(`Open PR list: ${JSON.stringify(list, null, 2)}`);
+
+            const resolved = process.env.RESOLVED_PR_NUMBER;
+            if (resolved) {
+              core.info(`Extractor resolved PR number: ${resolved}`);
+            } else {
+              core.warning('Extractor did not resolve a PR number for this commit.');
+            }
