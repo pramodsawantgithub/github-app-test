@@ -275,7 +275,7 @@ Purpose:
 
 1. Call the reusable `git-extractor-action` action.
 2. Resolve commit and pull request context for the current run.
-3. Print the resolved PR details and list open pull requests from the repository.
+3. Print resolved PR details plus open and closed PR lists from action outputs.
 
 Triggers:
 
@@ -288,9 +288,9 @@ Behavior:
 1. Checks out repository content.
 2. Calls `pramodsawantgithub/git-extractor-action@main`.
 3. Passes `secrets.GITHUB_TOKEN` and an optional `pr-number` input.
-4. Reads outputs such as `commit-sha`, `pr-number`, `pr-title`, and `pr-json` from the action step.
+4. Reads outputs such as `commit-sha`, `pr-id`, `pr-number`, `pr-title`, and `pr-json` from the action step.
 5. Prints resolved PR details safely in shell output.
-6. Uses `actions/github-script` to list open PRs with the GitHub REST API.
+6. Reads and prints `open-pr-count`, `open-prs-json`, `closed-pr-count`, and `closed-prs-json` from the same action step.
 
 How the cross-repository action call works:
 
@@ -312,6 +312,46 @@ Usage notes:
 2. On `workflow_dispatch`, pass `pr_number` if you want deterministic PR lookup.
 3. On `push`, PR resolution depends on whether the current commit is associated with a pull request.
 
+### 12. DORA Metrics With Git Extractor
+
+File: `.github/workflows/dora-metrics-with-git-extractor.yml`
+
+Purpose:
+
+1. Calculate DORA metrics from repository workflow run history through `git-extractor-action`.
+2. Print deployment frequency, change failure rate, lead time, MTTR, and full JSON output.
+
+Trigger:
+
+1. `workflow_dispatch`
+
+Inputs:
+
+1. `lookback_days` default `30`
+2. `branch` default `main`
+3. `workflow_id` optional deployment workflow filter (for example `release-build-artifact.yml`)
+
+Behavior:
+
+1. Checks out repository content.
+2. Calls `pramodsawantgithub/git-extractor-action` pinned to a full commit SHA.
+3. Passes `include-dora-metrics=true` and DORA filter inputs.
+4. Prints outputs such as `dora-deployment-count`, `dora-deployment-frequency-per-day`, `dora-change-failure-rate`, `dora-lead-time-hours`, `dora-mttr-hours`, and `dora-json`.
+
+Required configuration:
+
+1. `GITHUB_TOKEN` must have `actions: read` and `contents: read` permissions.
+
+## Dependency updates
+
+Dependabot configuration file: `.github/dependabot.yml`
+
+Behavior:
+
+1. Scans GitHub Actions dependencies weekly.
+2. Opens pull requests for workflow dependency updates.
+3. Keeps pinned action references updated through reviewable PRs.
+
 ## Notes for knowledge sharing
 
 1. Auto Open PR From Develop no longer runs on a schedule.
@@ -321,6 +361,8 @@ Usage notes:
 5. Release Build Artifact runs only for successful pushes on `main`.
 6. Upload Build To Docker runs through environment `production`, so approvals can be enforced.
 7. List PRs With Git Extractor prints PR JSON safely using environment variables so shell parsing does not break on quotes.
+8. DORA Metrics With Git Extractor uses a full action commit SHA to keep runs reproducible.
+9. Dependabot can automate workflow dependency update PRs, including action ref bumps.
 
 ## GitHub App details
 
