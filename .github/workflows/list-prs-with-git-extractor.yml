@@ -7,10 +7,6 @@ on:
         description: Pull request number to resolve (optional)
         required: false
         type: string
-  push:
-    branches:
-      - develop
-      - main
   pull_request:
     branches:
       - develop
