@@ -27,6 +27,7 @@ jobs:
       JF_URL: ${{ secrets.JFROG_URL }}
       JF_ACCESS_TOKEN: ${{ secrets.JFROG_ACCESS_TOKEN }}
       JFROG_REPOSITORY: ${{ secrets.JFROG_REPOSITORY }}
+      JFROG_PROJECT_KEY: ${{ secrets.JFROG_PROJECT_KEY }}
 
     steps:
       - name: Validate JFrog configuration
@@ -34,6 +35,14 @@ jobs:
           test -n "$JF_URL" || (echo "Missing secret: JFROG_URL" && exit 1)
           test -n "$JF_ACCESS_TOKEN" || (echo "Missing secret: JFROG_ACCESS_TOKEN" && exit 1)
           test -n "$JFROG_REPOSITORY" || (echo "Missing secret: JFROG_REPOSITORY" && exit 1)
+          if [[ "$JFROG_REPOSITORY" == *"/"* ]]; then
+            echo "JFROG_REPOSITORY must be only the repository key (for example: test-generic-local), not a path"
+            exit 1
+          fi
+          if [[ "$JF_URL" == *"/ui"* ]] || [[ "$JF_URL" == *"/ui/"* ]]; then
+            echo "JFROG_URL must be base tenant URL only (for example: https://triala8whj4.jfrog.io)"
+            exit 1
+          fi
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -z "$RUN_ID" ]; then
             echo "For workflow_dispatch, provide input run_id from a successful Upload Artifact workflow run"
             exit 1
@@ -60,13 +69,42 @@ jobs:
       - name: Setup JFrog CLI
         uses: jfrog/setup-jfrog-cli@v4
 
+      - name: Validate target repository in Artifactory
+        run: |
+          set -euo pipefail
+          repo_json="$(jf rt curl -sSf "/api/repositories/${JFROG_REPOSITORY}")"
+          if command -v jq >/dev/null 2>&1; then
+            repo_type="$(echo "$repo_json" | jq -r '.type')"
+            package_type="$(echo "$repo_json" | jq -r '.packageType')"
+          else
+            repo_type="$(echo "$repo_json" | sed -n 's/.*"type"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n1)"
+            package_type="$(echo "$repo_json" | sed -n 's/.*"packageType"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n1)"
+          fi
+
+          echo "Resolved repository: ${JFROG_REPOSITORY}"
+          echo "Repository type: ${repo_type}"
+          echo "Package type: ${package_type}"
+
+          if [ "$repo_type" != "LOCAL" ] && [ "$repo_type" != "FEDERATED" ]; then
+            echo "Repository ${JFROG_REPOSITORY} is not deployable for direct uploads (type=${repo_type})."
+            echo "Use a LOCAL generic repository key in JFROG_REPOSITORY (for example: test-generic-local)."
+            exit 1
+          fi
+
       - name: Upload build artifact to Artifactory
         run: |
+          set -euo pipefail
           short_sha="${HEAD_SHA::7}"
           target_path="${JFROG_REPOSITORY}/github-app-test/build-${RUN_NUMBER}-${short_sha}/"
           echo "Uploading to: ${target_path}"
 
-          jf rt upload "jfrog-upload/build/" "${target_path}" --recursive=true
+          project_opt=()
+          if [ -n "${JFROG_PROJECT_KEY:-}" ]; then
+            project_opt+=("--project=${JFROG_PROJECT_KEY}")
+            echo "Using JFrog project key from secret JFROG_PROJECT_KEY"
+          fi
+
+          jf rt upload "jfrog-upload/build/*" "${target_path}" --recursive=true --flat=false "${project_opt[@]}"
 
       - name: Upload summary
         run: |
