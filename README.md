@@ -342,6 +342,36 @@ Required configuration:
 
 1. `GITHUB_TOKEN` must have `actions: read` and `contents: read` permissions.
 
+### 13. Upload Build To JFrog
+
+File: `.github/workflows/upload-build-to-jfrog.yml`
+
+Purpose:
+
+1. Upload the `build-artifact` output to JFrog Artifactory for testing and external storage.
+
+Triggers:
+
+1. `workflow_run` when `Upload Artifact` completes successfully for `push` to `main`
+2. `workflow_dispatch` for manual testing with an input `run_id`
+
+Behavior:
+
+1. Validates JFrog secrets before upload.
+2. Downloads `build-artifact` from the upstream run.
+3. Uses JFrog CLI to upload build files to:
+4. `<JFROG_REPOSITORY>/github-app-test/build-<run_number>-<short_sha>/`
+
+Required configuration:
+
+1. Repository secret `JFROG_URL` (example: `https://<company>.jfrog.io`)
+2. Repository secret `JFROG_ACCESS_TOKEN`
+3. Repository secret `JFROG_REPOSITORY` (example: `generic-local`)
+
+Manual test note:
+
+1. For `workflow_dispatch`, provide `run_id` from a successful `Upload Artifact` run so the workflow can download the artifact.
+
 ## Dependency updates
 
 Dependabot configuration file: `.github/dependabot.yml`
