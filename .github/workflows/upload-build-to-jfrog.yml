@@ -1,0 +1,74 @@
+name: Upload Build To JFrog
+on:
+  workflow_run:
+    workflows:
+      - Upload Artifact
+    types:
+      - completed
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "Upstream Upload Artifact run ID (required for manual runs)"
+        required: false
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  jfrog-upload:
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main') }}
+    runs-on: ubuntu-latest
+    env:
+      RUN_ID: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.run_id || github.event.workflow_run.id }}
+      RUN_NUMBER: ${{ github.event.workflow_run.run_number || github.run_number }}
+      HEAD_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+      JF_URL: ${{ secrets.JFROG_URL }}
+      JF_ACCESS_TOKEN: ${{ secrets.JFROG_ACCESS_TOKEN }}
+      JFROG_REPOSITORY: ${{ secrets.JFROG_REPOSITORY }}
+
+    steps:
+      - name: Validate JFrog configuration
+        run: |
+          test -n "$JF_URL" || (echo "Missing secret: JFROG_URL" && exit 1)
+          test -n "$JF_ACCESS_TOKEN" || (echo "Missing secret: JFROG_ACCESS_TOKEN" && exit 1)
+          test -n "$JFROG_REPOSITORY" || (echo "Missing secret: JFROG_REPOSITORY" && exit 1)
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -z "$RUN_ID" ]; then
+            echo "For workflow_dispatch, provide input run_id from a successful Upload Artifact workflow run"
+            exit 1
+          fi
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: build-artifact
+          path: jfrog-upload/build
+          run-id: ${{ env.RUN_ID }}
+          github-token: ${{ github.token }}
+
+      - name: Show upload contents
+        run: |
+          echo "::group::JFrog upload tree"
+          if command -v tree >/dev/null 2>&1; then
+            tree jfrog-upload
+          else
+            find jfrog-upload -maxdepth 4 -print | sort
+          fi
+          echo "::endgroup::"
+
+      - name: Setup JFrog CLI
+        uses: jfrog/setup-jfrog-cli@v4
+
+      - name: Upload build artifact to Artifactory
+        run: |
+          short_sha="${HEAD_SHA::7}"
+          target_path="${JFROG_REPOSITORY}/github-app-test/build-${RUN_NUMBER}-${short_sha}/"
+          echo "Uploading to: ${target_path}"
+
+          jf rt upload "jfrog-upload/build/" "${target_path}" --recursive=true
+
+      - name: Upload summary
+        run: |
+          short_sha="${HEAD_SHA::7}"
+          echo "Build artifact uploaded to ${JFROG_REPOSITORY}/github-app-test/build-${RUN_NUMBER}-${short_sha}/"
